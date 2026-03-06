@@ -57,7 +57,7 @@ namespace FlashscoreAutomation
             List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)> leagueData,
             List<(string Country, double Temperature)> temperatures)
         {
-            string path = "C:\\Users\\Jakub\\Documents\\leagues.xlsx";
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
             FileInfo file = new FileInfo(path);
             if (file.Exists)
