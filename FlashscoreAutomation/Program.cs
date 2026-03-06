@@ -53,11 +53,64 @@ namespace FlashscoreAutomation
             return temperature;
         }
 
+        public static void SaveToExcel(
+            List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)> leagueData,
+            List<(string Country, double Temperature)> temperatures)
+        {
+            string path = "C:\\Users\\Jakub\\Documents\\leagues.xlsx";
+
+            FileInfo file = new FileInfo(path);
+            if (file.Exists)
+                file.Delete();
+
+            using (var package = new ExcelPackage(file))
+            {
+                var workSheet = package.Workbook.Worksheets.Add("Leagues");
+
+                workSheet.Cells[1, 1].Value = "Team";
+                workSheet.Cells[1, 2].Value = "MP";
+                workSheet.Cells[1, 3].Value = "W";
+                workSheet.Cells[1, 4].Value = "D";
+                workSheet.Cells[1, 5].Value = "L";
+                workSheet.Cells[1, 6].Value = "Goals";
+                workSheet.Cells[1, 7].Value = "RB";
+                workSheet.Cells[1, 8].Value = "Pts";
+
+                int row = 2;
+
+                foreach (var team in leagueData)
+                {
+                    workSheet.Cells[row, 1].Value = team.TeamName;
+                    workSheet.Cells[row, 2].Value = team.MP;
+                    workSheet.Cells[row, 3].Value = team.W;
+                    workSheet.Cells[row, 4].Value = team.D;
+                    workSheet.Cells[row, 5].Value = team.L;
+                    workSheet.Cells[row, 6].Value = team.Goals;
+                    workSheet.Cells[row, 7].Value = team.RB;
+                    workSheet.Cells[row, 8].Value = team.Pts;
+                    row++;
+                }
+
+                row += 2;
+                workSheet.Cells[row, 1].Value = "Country";
+                workSheet.Cells[row, 2].Value = "Temperature";
+
+                row++;
+
+                foreach (var temp in temperatures)
+                {
+                    workSheet.Cells[row, 1].Value = temp.Country;
+                    workSheet.Cells[row, 2].Value = temp.Temperature;
+                    row++;
+                }
+
+                package.Save();
+            }
+        }
+
         public static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Jakub");
-
-
             List<FootballLeagueInfo> leagueInfos = ReadLeagueInfoJSON();
 
             for (int i = 0; i < leagueInfos.Count; i++)
@@ -80,14 +133,13 @@ namespace FlashscoreAutomation
             var context = await browser.NewContextAsync();
             var page = await context.NewPageAsync();
 
-            var allLeaguesData = new List<(string TeamName, int MP, int W, int D, int L, string Goals, int Pts)>();
+            var allLeaguesData = new List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)>();
             var temperatures = new List<(string Country, double Temperature)>();
 
             try
             {
                 for (int i = 0; i < leagueInfos.Count; i++)
                 {
-                    Console.WriteLine($"Processing {leagueInfos[i].Latitude} - {leagueInfos[i].Longitude}");
                     string country = leagueInfos[i].Country.ToLower();
                     string leagueName = leagueInfos[i].LeaguseName.ToLower().Replace(" ", "-");
                     var url = $"https://www.flashscore.com/football/{country}/{leagueName}/standings/";
@@ -117,18 +169,21 @@ namespace FlashscoreAutomation
                             Convert.ToInt32(await cells.Nth(2).InnerTextAsync()), // D 
                             Convert.ToInt32(await cells.Nth(3).InnerTextAsync()), // L 
                             await cells.Nth(4).InnerTextAsync(),                // Goals
-                            Convert.ToInt32(await cells.Nth(5).InnerTextAsync())  // Pts
+                            Convert.ToInt32(await cells.Nth(5).InnerTextAsync()), // RB
+                            Convert.ToInt32(await cells.Nth(6).InnerTextAsync())  // Pts
                         ));
                     }
 
                     double temp = await GetTemperature(leagueInfos[i].Latitude, leagueInfos[i].Longitude);
                     temperatures.Add((leagueInfos[i].Country, temp));
 
+                    SaveToExcel(allLeaguesData, temperatures);
+
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Wystąpił błąd: {ex.Message}");
+                Console.WriteLine(ex.Message);
             }
             finally
             {
