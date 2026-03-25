@@ -1,15 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using FlashscoreAutomation.Models;
+using FlashscoreAutomation.Logger;
 using OfficeOpenXml;
 
-namespace FlashscoreAutomation
+namespace FlashscoreAutomation.FileWriter
 {
-    public class SaveToFile
+    public class ExcelFileWriterService : IFileWriter
     {
-        public static void SaveToExcel(
-            Dictionary<string, List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)>> leaguesData,
-            List<(string Country, double Temperature)> temperatures)
+        private readonly ILogger _logger;
+
+        public ExcelFileWriterService(ILogger logger) 
+        {
+            _logger = logger;
+        }
+
+        public void SaveToExcel(Dictionary<string, List<TeamInfo>> leaguesData, List<(string Country, double Temperature)> temperatures)
         {
             string folder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string fullPath = Path.Combine(folder, "FlashscoreStandings.xlsx");
@@ -41,13 +45,13 @@ namespace FlashscoreAutomation
                     foreach (var team in league.Value)
                     {
                         workSheet.Cells[row, 1].Value = team.TeamName;
-                        workSheet.Cells[row, 2].Value = team.MP;
-                        workSheet.Cells[row, 3].Value = team.W;
-                        workSheet.Cells[row, 4].Value = team.D;
-                        workSheet.Cells[row, 5].Value = team.L;
+                        workSheet.Cells[row, 2].Value = team.MatchesPlayed;
+                        workSheet.Cells[row, 3].Value = team.Wins;
+                        workSheet.Cells[row, 4].Value = team.Draws;
+                        workSheet.Cells[row, 5].Value = team.Loosses;
                         workSheet.Cells[row, 6].Value = team.Goals;
-                        workSheet.Cells[row, 7].Value = team.RB;
-                        workSheet.Cells[row, 8].Value = team.Pts;
+                        workSheet.Cells[row, 7].Value = team.GoalDifference;
+                        workSheet.Cells[row, 8].Value = team.Points;
                         row++;
                     }
 
@@ -74,7 +78,7 @@ namespace FlashscoreAutomation
                 package.Save();
             }
 
-            Logger.Log($"Data saved to {fullPath}");
+            _logger.Log($"Data saved to {fullPath}");
         }
     }
 }

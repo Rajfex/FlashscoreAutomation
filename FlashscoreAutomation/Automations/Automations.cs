@@ -1,11 +1,19 @@
 ﻿using FlashscoreAutomation.Models;
+using FlashscoreAutomation.Logger;
 using Microsoft.Playwright;
 
 namespace FlashscoreAutomation.Automations
 {
-    public static class Automations
+    public class AutomationsService : IAutomations
     {
-        public static async Task<List<LeagueResult>> GetLeaguesInfoAsync(List<FootballLeagueInfo> leagueInfos)
+        private readonly ILogger _logger;
+
+        public AutomationsService(ILogger logger)
+        {
+            _logger = logger;
+        }
+
+        public async Task<List<LeagueResult>> GetLeaguesInfoAsync(List<FootballLeagueInfo> leagueInfos)
         {
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -27,7 +35,7 @@ namespace FlashscoreAutomation.Automations
                     string leagueName = leagueInfo.LeaguseName.ToLower().Replace(" ", "-");
                     var url = $"https://www.flashscore.com/football/{country}/{leagueName}/standings/";
 
-                    Logger.Log($"Navigating to {url}");
+                    _logger.Log($"Navigating to {url}");
                     await page.GotoAsync(url);
 
                     var cookieButton = page.Locator("#onetrust-accept-btn-handler");
@@ -46,16 +54,16 @@ namespace FlashscoreAutomation.Automations
                         var teamName = await currentRow.Locator(".tableCellParticipant__name").InnerTextAsync();
                         var cells = currentRow.Locator(".table__cell--value");
 
-                        var team = new TeamStanding
+                        var team = new TeamInfo
                         {
                             TeamName = teamName,
-                            MP = int.Parse(await cells.Nth(0).InnerTextAsync()),
-                            W = int.Parse(await cells.Nth(1).InnerTextAsync()),
-                            D = int.Parse(await cells.Nth(2).InnerTextAsync()),
-                            L = int.Parse(await cells.Nth(3).InnerTextAsync()),
+                            MatchesPlayed = int.Parse(await cells.Nth(0).InnerTextAsync()),
+                            Wins = int.Parse(await cells.Nth(1).InnerTextAsync()),
+                            Draws = int.Parse(await cells.Nth(2).InnerTextAsync()),
+                            Loosses = int.Parse(await cells.Nth(3).InnerTextAsync()),
                             Goals = await cells.Nth(4).InnerTextAsync(),
-                            RB = int.Parse(await cells.Nth(5).InnerTextAsync()),
-                            Pts = int.Parse(await cells.Nth(6).InnerTextAsync())
+                            GoalDifference = int.Parse(await cells.Nth(5).InnerTextAsync()),
+                            Points = int.Parse(await cells.Nth(6).InnerTextAsync())
                         };
 
                         leagueResult.Teams.Add(team);
@@ -64,17 +72,17 @@ namespace FlashscoreAutomation.Automations
                     allLeaguesData.Add(leagueResult);
                 }
 
-                Logger.Log("Finished scanning Flashscore");
+                _logger.Log("Finished scanning Flashscore");
                 return allLeaguesData;
             }
             catch (Exception ex)
             {
-                Logger.Log($"Error in scanning Flashscore: {ex.Message}");
+                _logger.Log($"Error in scanning Flashscore: {ex.Message}");
                 return new List<LeagueResult>();
             }
             finally
             {
-                Logger.Log("Closing browser");
+                _logger.Log("Closing browser");
                 await browser.CloseAsync();
             }
         }

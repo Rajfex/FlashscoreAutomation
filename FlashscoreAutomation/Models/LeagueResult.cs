@@ -7,6 +7,7 @@ namespace FlashscoreAutomation.Models
     public class LeagueResult
     {
         public string LeagueName { get; set; }
-        public List<TeamStanding> Teams { get; set; } = new();
+
+        public List<TeamInfo> Teams { get; set; } = new();
     }
 }

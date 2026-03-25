@@ -14,3 +14,21 @@
         }
     ]
 }
+
+{
+    "StocksInfo": [
+        {
+            "type": "Akcje",
+	    "name": "ALLEGRO
+        },
+        {
+            "type": "Indeksy",
+	    "name": "WIG20"
+        }
+    ]
+}
+
+
+
+{"FootballLeagueInfo": [{"country": "Poland","leagueName": "Ekstraklasa"},{"country": "England","leagueName": "Premier League"}]}
+	"inputData": "{'FootballLeagueInfo': [{'country': 'Poland','leagueName': 'Ekstraklasa'},{'country': 'England','leagueName': 'Premier League'}]}"

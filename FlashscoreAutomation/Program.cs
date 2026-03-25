@@ -1,8 +1,12 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using FlashscoreAutomation.Models;
-using Microsoft.Playwright;
+﻿using FlashscoreAutomation.Models;
 using OfficeOpenXml;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using FlashscoreAutomation.Automations;
+using FlashscoreAutomation.FileWriter;
+using FlashscoreAutomation.JSONReader;
+using FlashscoreAutomation.Logger;
+using FlashscoreAutomation.TemperatureReader;
 
 namespace FlashscoreAutomation
 {
@@ -11,32 +15,51 @@ namespace FlashscoreAutomation
     {
         public static async Task Main(string[] args)
         {
-            Logger.Log("Application started");
-            ExcelPackage.License.SetNonCommercialPersonal("Jakub");
-            List<FootballLeagueInfo> leagueInfos = ReadFromJSON.ReadLeagueInfo();
 
-            var results = await Automations.Automations.GetLeaguesInfoAsync(leagueInfos);
-            var leaguesData = new Dictionary<string, List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)>>();
+            using var host = Host.CreateDefaultBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddTransient<IAutomations, AutomationsService>();
+                    services.AddTransient<IFileWriter, ExcelFileWriterService>();
+                    services.AddTransient<IReaderFromJSON, ReaderFromJSONService>();
+                    services.AddTransient<ILogger, LoggerSerivce>();
+                    services.AddTransient<ITemperature, TemperatureService>();
+                })
+                .Build();
+
+            var automations = host.Services.GetRequiredService<IAutomations>();
+            var fileWriter = host.Services.GetRequiredService<IFileWriter>();
+            var readerFromJSON = host.Services.GetRequiredService<IReaderFromJSON>();
+            var logger = host.Services.GetRequiredService<ILogger>();
+            var temperature = host.Services.GetRequiredService<ITemperature>();
+            var leaguesData = new Dictionary<string, List<TeamInfo>>();
+
+            logger.Log("Application started");
+
+            ExcelPackage.License.SetNonCommercialPersonal("Jakub");
+            List<FootballLeagueInfo> leagueInfos = readerFromJSON.ReadLeagueInfo();
+
+            var results = await automations.GetLeaguesInfoAsync(leagueInfos);
 
             foreach (var league in results)
             {
-                var list = new List<(string TeamName, int MP, int W, int D, int L, string Goals, int RB, int Pts)>();
+                var list = new List<TeamInfo>();
                 foreach (var team in league.Teams)
                 {
-                    list.Add((team.TeamName, team.MP, team.W, team.D, team.L, team.Goals, team.RB, team.Pts));
+                    list.Add(team);
                 }
                 leaguesData.Add(league.LeagueName, list);
             }
 
-            var temperature = new List<(string Country, double Temperature)>();
+            var tempList = new List<(string Country, double Temperature)>();
 
             foreach (var temp in leagueInfos)
             {
-                var tempData = await Temperature.GetTemperatureAsync(temp.Latitude, temp.Longitude);
-                temperature.Add((temp.Country, tempData));
+                var tempData = await temperature.GetTemperatureAsync(temp.Latitude, temp.Longitude);
+                tempList.Add((temp.Country, tempData));
             }
 
-            SaveToFile.SaveToExcel(leaguesData, temperature);
+            fileWriter.SaveToExcel(leaguesData, tempList);
         }
     }
 }

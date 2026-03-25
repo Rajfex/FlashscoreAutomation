@@ -4,11 +4,15 @@ using System.Text;
 using System.Xml.Linq;
 using Microsoft.Data.Sqlite;
 
-namespace FlashscoreAutomation
+namespace FlashscoreAutomation.Logger
 {
-    public class Logger
+    public class LoggerSerivce : ILogger
     {
-        public static async Task Log(string text)
+        public LoggerSerivce() 
+        {
+        }
+
+        public async Task Log(string text)
         {
             using var connection = new SqliteConnection("Data Source=logs.db");
             await connection.OpenAsync();
